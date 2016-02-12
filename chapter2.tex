@@ -1,0 +1,135 @@
+\documentclass[twoside]{article}
+\usepackage{amsmath,amssymb,amsthm,graphicx, mathtools}
+\usepackage{epsfig}
+\usepackage[authoryear]{natbib}
+
+\input{scribe_macros}
+
+\setlength{\oddsidemargin}{0.25 in}
+\setlength{\evensidemargin}{-0.25 in}
+\setlength{\topmargin}{-0.6 in}
+\setlength{\textwidth}{6.5 in}
+\setlength{\textheight}{8.5 in}
+\setlength{\headsep}{0.75 in}
+\setlength{\parindent}{0 in}
+\setlength{\parskip}{0.1 in}
+
+\newcommand{\lecture}[4]{
+   \pagestyle{myheadings}
+   \thispagestyle{plain}
+   \newpage
+   \setcounter{page}{1}
+   \noindent
+   \begin{center}
+   \framebox{
+      \vbox{\vspace{2mm}
+    \hbox to 6.28in { {\bf Rassmusen \hfill  02/09/2016} }
+       \vspace{6mm}
+       \hbox to 6.28in { {\Large \hfill #1  \hfill}  }
+       \vspace{6mm}
+       \hbox to 6.28in { {\it Lecturer: #2 \hfill Scribe: #3} }
+      \vspace{2mm}}
+   }
+   \end{center}
+   \markboth{#1}{#1}
+   \vspace*{4mm}
+}
+
+% Local Macros Put your favorite macros here that don't appear in
+% stat-macros.tex.  We can eventually incorporate them into
+% stat-macros.tex if they're of general use.
+
+\begin{document}
+
+\lecture{Chapter two: Regression}{}{Maggie Makar}{}
+\section{Some motivation} 
+To motivate some of the intuitions behind Gaussian Processes (GPs), we make a quick stop at Bayesian regressions and feature projections. 
+\begin{itemize}
+\item\textbf{Recall: Bayesian regression}:\\
+Bayesian regressions are identical to the classic linear regression but have a Gaussian prior imposed on the weights. Our set up is as follows:
+\begin{align}
+y = f(x) + \epsilon = x^Tw + \epsilon \\
+%
+     \epsilon \sim \mathcal{N}(0, \sigma^2_n)  \\
+     w \sim \mathcal{N}(0, \Sigma_p)
+\end{align}
+Our entire Bayesian ``system" is defined by 5 expressions: 
+\begin{align}
+\overset{\underbrace{p(w| X, y))}}{\text{Posterior}} =  \frac{\underset{\overbrace{p(y|X, w)}}{\text{likelihood}}   
+\underset{\overbrace{p(w)}}{\text{\ \ \ prior}}}
+{\overset{\underbrace{p(y| X))}}{\text{marginal liklelihood}} } \qquad \text{ and } \qquad \overset{\underbrace{\text{Predictive distribution } }}{p(f_* |x_*, X, y)}  
+\end{align}
+The likelihood of  y is the multiplication of the probabilities of all they $y_i$'s. We're allowed to multiply the probabilities because we defined $\sigma$ to be iid (meaning, if the $n$ subscript was missing from equation (2) we wouldn't be allowed to simply multiply all the probabilities)
+\begin{align}
+p(y|X, w)  = \prod^{i = 1}_{n} p(y_i| x_i, w)  = \prod^{i =1}_n \frac{1}{\sqrt{2\pi\sigma_n}} \text{exp} (-\frac{ (y_i-x^Tw)^2}{2\sigma^2_n} )  \notag \\
+ =\frac{1}{(2\pi\sigma^2_n)^\frac{n}{2}} \text{exp} (-\frac{1}{2\sigma^2_n} |y - X^Tw|^2) =\mathcal{N}(X^Tw, \sigma^2_nI) 
+\end{align}
+
+This is the same as the marginal likelihood except in the marginal likelihood we marginalize over $w$ (through integration if w is continuos and summation if w is discrete) 
+\begin{equation}
+p(y|X) = \int_w p(y|X, w) p(w) dw
+\end{equation}
+The posterior on the w 
+
+The posterior predictive (which differs from equation XXX because here we're making a prediction) 
+One thing to note is that we can factor over the training sets because we assume that the noise variable is independent. If there were correlations between the noise components of the different training examples (i.e., if we were to blot out the $n$ subscript in equation XXX, we would not be able to multiply the probabilities. \\
+\item\textbf{Projections onto higher spaces}\\
+It is often the case that presenting the feature vector $x$ in its raw form is not ideal because of its limited expressiveness. This is true in cases where we believe that the relationship between $x$ and $y$ is for example sinusoidal or cubic. In that case we map our input vector using a basis function; $\phi(x) = sin(x)$ or $\phi(x) = x^3$ for those two examples.  
+
+\end{itemize}
+
+\section{The nitty gritty: GPs and their parameters}
+One way to understand Gaussian processes is to think of a collection of  many gaussian distributions (for now, let's say there are M of them to simplify discussions about dimensionality) parameterized by a mean function $m(x)$ and a covariance function $k(x, x')$. In fancy math words, \\ 
+\begin{equation}
+f(x) \sim  \mathcal{GP}(m(x), k(x, x')) \\
+\end{equation}
+
+where the mean function, $m(x) = \mathbb{E} [f(x)]$ is a vector of length M,  and  the covariance function $k(x, x') = \mathbb{E}[f(x) - m(x)][f(x') - m(x')]$ is a matrix of dimension MxM. The covariance function can be intuitively regarded as a similarity matrix over the $f(x)$'s since it describes how every pair of gaussians co-vary. 
+Going back to our motivating example in section 1, a Bayesian regression with $f(x) = \phi^Tw$, prior 
+
+\section{Nittier and grittier: hyper parameters governing $m(x)$ and $k(x, x')$}
+\section{Decision theory for regression}
+\section{Smoothing, weight functions and equivalent kernels}
+\section{Incorporating explicit basis functions}
+\section{Final remarks}
+
+%\begin{remark} Although Pollard doesn't define it, the log of the
+  %covering number (see Definition~\ref{def:covering-number}) is
+  %called the metric entropy.
+%\end{remark}
+
+\subsection{A subsection heading}
+
+Here is how to typeset an array of equations.
+
+\begin{align}
+	x & = y + z  \label{eq:notInteresting} \\
+%
+     \alpha & = \frac{\beta}{\gamma} \label{eq:interesting}
+\end{align}
+
+Notice that equation~(\ref{eq:interesting}) is interesting, while
+equation~(\ref{eq:notInteresting}) isn't really.
+
+And a table.
+                                                                                
+\begin{table}[h]
+\centerline{
+    \begin{tabular}{|c|cc|}
+        \hline
+        \textbf{Method} & Cost & Iterations \\
+        \hline
+        Naive descent       & 12 & 200 \\
+        Newton's method & 500 & 30 \\
+        \hline
+    \end{tabular}}
+\caption{Comparison of different methods.}
+\end{table}
+
+\bibliographystyle{apalike}
+\bibliography{scribe}
+
+\end{document}
+
+
+
