@@ -141,7 +141,7 @@ if __name__ == '__main__':
 	# Standard deviation of the noise
 	sigma_n = 0.1
 
-	# Update the mean and covariance
+	# Update the mean and covariance from equations 2.22-2.24
 	f_bar_star_mean = k_xsx.dot(np.linalg.inv(k_xx+ (sigma_n**2)*np.identity(k_xx.shape[0])).dot(y))
 	f_bar_star_cov = k_xsxs - k_xsx.dot(np.linalg.inv(k_xx+ (sigma_n**2)*np.identity(k_xx.shape[0])).dot(k_xxs))
 
