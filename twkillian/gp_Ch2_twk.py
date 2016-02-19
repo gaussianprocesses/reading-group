@@ -45,8 +45,31 @@ def sample_GP(num_functions,n_pts,mean,cov):
 
 	return sampled_func
 
+def calculate_func_mean_and_variance(func_samples):
+	''' Simple helper function that will calulate the mean and variance 
+		of a collection of functions
+		INPUT:
+			func_samples: an nd-array of functions, functions are along the columns
+		OUTPUT:
+			func_mean  : the mean function of func_samples
+			func_lower : the lower bound (statistically) of func_samples
+			func_upper : the upper bound (statistically) of func_samples
+		----------------------------------------------------------------------------
+		Notes:
+			I use 3sigma variance, where 99.7 of the spread is accounted for.
+	'''
+
+	func_mean = np.mean(func_samples,axis=1)
+	func_std = np.std(func_samples,axis=1)
+	func_lower = func_mean-(3*func_std)
+	func_upper = func_mean+(3*func_std)
+
+	return func_mean, func_lower, func_upper
+
+
 
 if __name__ == '__main__':
+	
 	########################
 	## Noise-free Example ##
 	########################
@@ -76,6 +99,7 @@ if __name__ == '__main__':
 	plt.fill_between(x_star,-2.5*np.ones(n_pts),2.5*np.ones(n_pts),color='0.15',alpha=0.25)
 	plt.xlabel('input, x')
 	plt.ylabel('output, f(x)')
+	plt.title('Sampling from Prior')
 	plt.show()
 
 	# 2. Now let's assume that we have some know data points;
@@ -99,10 +123,7 @@ if __name__ == '__main__':
 	f_star_sampled_values = sample_GP(n_samples*10,n_pts,f_star_mean,f_star_cov)
 
 	# Get mean and std of generated functions.
-	func_mean = np.mean(f_star_sampled_values,axis=1)
-	func_std = np.std(f_star_sampled_values,axis=1)
-	func_lower = func_mean-(3*func_std)
-	func_upper = func_mean+(3*func_std)
+	func_mean, func_lower, func_upper = calculate_func_mean_and_variance(f_star_sampled_values)
 
 	# Plot the results
 	plt.figure()
@@ -110,9 +131,34 @@ if __name__ == '__main__':
 	plt.fill_between(x_star,func_lower,func_upper,color='0.15',alpha=0.25)
 	plt.xlabel('input, x')
 	plt.ylabel('output, f(x)')
+	plt.title("Prediction with noise-free observations")
 	plt.show()
 
+	########################
+	## With Noise Example ##
+	########################
 
+	# Standard deviation of the noise
+	sigma_n = 0.1
+
+	# Update the mean and covariance
+	f_bar_star_mean = k_xsx.dot(np.linalg.inv(k_xx+ (sigma_n**2)*np.identity(k_xx.shape[0])).dot(y))
+	f_bar_star_cov = k_xsxs - k_xsx.dot(np.linalg.inv(k_xx+ (sigma_n**2)*np.identity(k_xx.shape[0])).dot(k_xxs))
+
+	# Redraw the sample functions
+	f_bar_star_sampled_values = sample_GP(n_samples*10,n_pts,f_bar_star_mean,f_bar_star_cov)
+
+	# Get mean and spread of newly sampled values
+	func_bar_mean, func_bar_lower, func_bar_upper = calculate_func_mean_and_variance(f_bar_star_sampled_values)
+
+	# Plot the results
+	plt.figure()
+	plt.plot(x_star,f_bar_star_sampled_values[:,0],x_star,f_bar_star_sampled_values[:,1],x_star,f_bar_star_sampled_values[:,2])
+	plt.fill_between(x_star,func_bar_lower,func_bar_upper,color='0.15',alpha=0.25)
+	plt.xlabel('input, x')
+	plt.ylabel('output, f(x)')
+	plt.title("Prediction using noisy observations")
+	plt.show()
 
 
 
