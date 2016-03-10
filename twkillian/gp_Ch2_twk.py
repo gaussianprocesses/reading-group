@@ -164,8 +164,8 @@ if __name__ == '__main__':
 	## Marginal likelihood (p(y| X)) ##
 	###################################
 
-	marg_data = 0.5* y.T.dot(np.linalg.inv(k_xx+ (sigma_n**2)*np.identity(k_xx.shape[0])).dot(y)) - 0.5 *
-	 np.log(np.det(np.linalg.inv(k_xx+ (sigma_n**2)*np.identity(k_xx.shape[0])))) - (len(y)*0.5) * np.log(2*np.pi) 
+	marg_data = 0.5* y.T.dot(np.linalg.inv(k_xx+ (sigma_n**2)*np.identity(k_xx.shape[0])).dot(y)) - 0.5 * \
+		np.log(np.linalg.det(np.linalg.inv(k_xx+ (sigma_n**2)*np.identity(k_xx.shape[0])))) - (len(y)*0.5) * np.log(2*np.pi) 
 
 
 
