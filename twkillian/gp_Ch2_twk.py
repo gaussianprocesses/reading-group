@@ -76,7 +76,7 @@ if __name__ == '__main__':
 
 	length_scale = 1
 	x_domain = (-5,5)
-	n_pts = 50
+	n_pts = 100
 	n_samples = 3
 	seed = 12345
 
@@ -94,13 +94,13 @@ if __name__ == '__main__':
 	sampled_values = sample_GP(n_samples,n_pts,np.zeros(n_pts),sigma)
 
 	# Plot the result
-	plt.figure()
-	plt.plot(x_star,sampled_values[:,0],x_star,sampled_values[:,1],x_star,sampled_values[:,2])
-	plt.fill_between(x_star,-2.5*np.ones(n_pts),2.5*np.ones(n_pts),color='0.15',alpha=0.25)
-	plt.xlabel('input, x')
-	plt.ylabel('output, f(x)')
-	plt.title('Sampling from Prior')
-	plt.show()
+	# plt.figure()
+	# plt.plot(x_star,sampled_values[:,0],x_star,sampled_values[:,1],x_star,sampled_values[:,2])
+	# plt.fill_between(x_star,-2.5*np.ones(n_pts),2.5*np.ones(n_pts),color='0.15',alpha=0.25)
+	# plt.xlabel('input, x')
+	# plt.ylabel('output, f(x)')
+	# plt.title('Sampling from Prior')
+	# plt.show()
 
 	# 2. Now let's assume that we have some know data points;
 	x = np.array([-4, -3, -1, 0, 2])
@@ -109,10 +109,10 @@ if __name__ == '__main__':
 	# Calculate the covariance matrices
 	# to "condition" based on the observed (top of page 16)
 	# this is the part that confused @mymakar, the following follows the text verbatim
-	k_xx = calcSigma(x,x,1)
-	k_xxs = calcSigma(x,x_star,1)
-	k_xsx = calcSigma(x_star,x,1)
-	k_xsxs = calcSigma(x_star,x_star,1)
+	k_xx = calcSigma(x,x,length_scale)
+	k_xxs = calcSigma(x,x_star,length_scale)
+	k_xsx = calcSigma(x_star,x,length_scale)
+	k_xsxs = calcSigma(x_star,x_star,length_scale)
 
 	# Generate points according to equation 2.19
 	# Update mean and covariance
@@ -126,13 +126,14 @@ if __name__ == '__main__':
 	func_mean, func_lower, func_upper = calculate_func_mean_and_variance(f_star_sampled_values)
 
 	# Plot the results
-	plt.figure()
-	plt.plot(x_star,f_star_sampled_values[:,0],x_star,f_star_sampled_values[:,1],x_star,f_star_sampled_values[:,2])
-	plt.fill_between(x_star,func_lower,func_upper,color='0.15',alpha=0.25)
-	plt.xlabel('input, x')
-	plt.ylabel('output, f(x)')
-	plt.title("Prediction with noise-free observations")
-	plt.show()
+	# plt.figure()
+	# plt.plot(x_star,f_star_sampled_values[:,0],x_star,f_star_sampled_values[:,1],x_star,f_star_sampled_values[:,2])
+	# plt.fill_between(x_star,func_lower,func_upper,color='0.15',alpha=0.25)
+	# plt.xlabel('input, x')
+	# plt.ylabel('output, f(x)')
+	# plt.title("Prediction with noise-free observations")
+	# plt.show()
+
 
 	########################
 	## With Noise Example ##
@@ -152,13 +153,13 @@ if __name__ == '__main__':
 	func_bar_mean, func_bar_lower, func_bar_upper = calculate_func_mean_and_variance(f_bar_star_sampled_values)
 
 	# Plot the results
-	plt.figure()
-	plt.plot(x_star,f_bar_star_sampled_values[:,0],x_star,f_bar_star_sampled_values[:,1],x_star,f_bar_star_sampled_values[:,2])
-	plt.fill_between(x_star,func_bar_lower,func_bar_upper,color='0.15',alpha=0.25)
-	plt.xlabel('input, x')
-	plt.ylabel('output, f(x)')
-	plt.title("Prediction using noisy observations")
-	plt.show()
+	# plt.figure()
+	# plt.plot(x_star,f_bar_star_sampled_values[:,0],x_star,f_bar_star_sampled_values[:,1],x_star,f_bar_star_sampled_values[:,2])
+	# plt.fill_between(x_star,func_bar_lower,func_bar_upper,color='0.15',alpha=0.25)
+	# plt.xlabel('input, x')
+	# plt.ylabel('output, f(x)')
+	# plt.title("Prediction using noisy observations")
+	# plt.show()
 
 	###################################
 	## Marginal likelihood (p(y| X)) ##
@@ -169,4 +170,85 @@ if __name__ == '__main__':
 
 
 
+	#############################################
+	## Monte Carlo Approach to Uncertain Input ##
+	#############################################
 
+	# Now consider the instance where the test inputs are randomly determined themselves. 
+	# Here we'll loop through a number of times to see how the the predicted functions change.
+
+	n_mc = 100
+
+	unc_sampled_funcs = np.zeros((n_pts,n_samples*10,n_mc))
+
+	for i_mc in xrange(n_mc):
+
+		# Generate randomized x_star
+		temp_x_star = np.random.normal(x_star,0.25)
+
+		# Calculate all of the covariance matrices and etc.
+		temp_k_xx = calcSigma(x,x,length_scale)
+		temp_k_xxs = calcSigma(x,temp_x_star,length_scale)
+		temp_k_xsx = calcSigma(temp_x_star,x,length_scale)
+		temp_k_xsxs = calcSigma(temp_x_star,temp_x_star,length_scale)
+
+		# Generate points according to equation 2.19
+		# Update mean and covariance
+		temp_f_bar_star_mean = temp_k_xsx.dot(np.linalg.inv(temp_k_xx+ (sigma_n**2)*np.identity(temp_k_xx.shape[0])).dot(y))
+		temp_f_bar_star_cov = temp_k_xsxs - temp_k_xsx.dot(np.linalg.inv(temp_k_xx+ (sigma_n**2)*np.identity(temp_k_xx.shape[0])).dot(temp_k_xxs))
+
+		# Redraw the sample functions
+		unc_sampled_funcs[:,:,i_mc] = sample_GP(n_samples*10,n_pts,temp_f_bar_star_mean,temp_f_bar_star_cov)
+
+	# import pdb
+	# pdb.set_trace()
+
+	# Take the mean over all MC determined posterior draws
+	# unc_averaged_values = np.mean(unc_sampled_funcs,axis=2)
+	unc_averaged_values = unc_sampled_funcs[:,:,-1]
+
+	# Get mean and spread of newly sampled values
+	unc_func_bar_mean, unc_func_bar_lower, unc_func_bar_upper = calculate_func_mean_and_variance(unc_averaged_values)
+
+	# Plot the results
+	# plt.figure()
+	# plt.plot(temp_x_star,unc_averaged_values[:,0],temp_x_star,unc_averaged_values[:,10],temp_x_star,unc_averaged_values[:,20])
+	# plt.fill_between(temp_x_star,unc_func_bar_lower,unc_func_bar_upper,color='0.15',alpha=0.25)
+	# plt.xlabel('input, x')
+	# plt.ylabel('output, f(x)')
+	# plt.title("Prediction using noisy observations with uncertain input")
+	# plt.show()
+
+	# Plot all four together
+	plt.figure(figsize=(18,16))
+	plt.subplot(2,2,1)
+	plt.plot(x_star,sampled_values[:,0],x_star,sampled_values[:,1],x_star,sampled_values[:,2])
+	plt.fill_between(x_star,-2.5*np.ones(n_pts),2.5*np.ones(n_pts),color='0.15',alpha=0.25)
+	plt.xlabel('input, x')
+	plt.ylabel('output, f(x)')
+	plt.title('Sampling from Prior')
+	plt.subplot(2,2,2)
+	plt.plot(x_star,f_star_sampled_values[:,0],x_star,f_star_sampled_values[:,1],x_star,f_star_sampled_values[:,2])
+	plt.fill_between(x_star,func_lower,func_upper,color='0.15',alpha=0.25)
+	plt.xlabel('input, x')
+	plt.ylabel('output, f(x)')
+	plt.title("Prediction with noise-free observations")
+	plt.subplot(2,2,3)
+	plt.plot(x_star,f_bar_star_sampled_values[:,0],x_star,f_bar_star_sampled_values[:,1],x_star,f_bar_star_sampled_values[:,2])
+	plt.fill_between(x_star,func_bar_lower,func_bar_upper,color='0.15',alpha=0.25)
+	plt.xlabel('input, x')
+	plt.ylabel('output, f(x)')
+	plt.title("Prediction using noisy observations")
+	plt.subplot(2,2,4)
+	plt.plot(temp_x_star,unc_averaged_values[:,0],temp_x_star,unc_averaged_values[:,1],temp_x_star,unc_averaged_values[:,2])
+	plt.fill_between(temp_x_star,unc_func_bar_lower,unc_func_bar_upper,color='0.15',alpha=0.25)
+	plt.xlabel('input, x')
+	plt.ylabel('output, f(x)')
+	plt.title("Prediction using noisy observations with uncertain input")
+	plt.show()
+
+
+
+
+
+ 
