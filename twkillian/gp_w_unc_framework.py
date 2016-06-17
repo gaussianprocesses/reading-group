@@ -77,10 +77,10 @@ if __name__ == '__main__':
 
 	full_x = np.linspace(x_domain[0],x_domain[1],n_pts)
 
-	seed = 12345
+	seed = 222
 
-	true_func = lambda xx: xx**2 * np.cos(xx)/xx
-	# true_func = lambda xx: np.sqrt(np.abs(xx)) * np.sin(xx)**2
+	# true_func = lambda xx: xx**2 * np.cos(xx)/xx
+	true_func = lambda xx: np.sqrt(np.abs(xx)) * np.sin(xx)**2
 	# true_func = lambda xx: np.exp(-np.sin(xx)/xx)
 
 	# Generate training points
@@ -97,8 +97,7 @@ if __name__ == '__main__':
 	kss = calcSigma(full_x,full_x,length_scale) # Get test covariance
 
 	Omg = np.linalg.inv(K+((noise_var/2.)**2)*np.identity(n_train))
-	Beta = Omg.dot(y_train)
-
+	Beta = Omg.dot(y_train).reshape((-1,1))
 
 
 	post_mean = ks.T.dot(Beta)
@@ -108,7 +107,7 @@ if __name__ == '__main__':
 	prior_sampled_values = sample_GP(n_samples,n_pts,np.zeros(n_pts),kss)
 
 	# Sample from posterior predictive distribution
-	post_sampled_values = sample_GP(n_samples*100,n_pts,post_mean,post_var)
+	post_sampled_values = sample_GP(n_samples*100,n_pts,post_mean.flatten(),post_var)
 
 	# Get mean and spread of newly sampled values
 	f_post_mean, f_post_lower, f_post_upper = calculate_func_mean_and_variance(post_sampled_values)
@@ -146,6 +145,7 @@ if __name__ == '__main__':
 
 	## MONTE-CARLO METHOD - With sampled pts from input distribution, gather sampled output from GP.
 	#####################
+	#-------Need to rethink the sampling of the GP
 
 	K_unc_mc = calcSigma(x_train,sampled_unc_inputs,length_scale)
 	K_unc_mc2 = calcSigma(sampled_unc_inputs,sampled_unc_inputs,length_scale)
@@ -156,13 +156,13 @@ if __name__ == '__main__':
 	post_mc_mean = K_unc_mc.T.dot(Beta)
 	post_mc_var = K_unc_mc2 - K_unc_mc.T.dot(Omg.dot(K_unc_mc))
 
-	post_mc_sampled_values = sample_GP(1,10*n_pts,post_mc_mean,post_mc_var).flatten()
+	post_mc_sampled_values = sample_GP(1,10*n_pts,post_mc_mean.flatten(),post_mc_var).flatten()
 
 	post_mc_mean = post_mc_sampled_values.mean()
 	post_mc_var = post_mc_sampled_values.std()**2
 
 	mc_density = gaussian_kde(post_mc_sampled_values)
-	mc_unc_xs = np.linspace(post_mc_mean-2*post_mc_var,post_mc_mean+2*post_mc_var,10*n_pts)
+	mc_unc_xs = np.linspace(-4,4,10*n_pts)
 
 
 	## EXACT METHOD
@@ -171,26 +171,21 @@ if __name__ == '__main__':
 	# Calculate L and l
 	K_unc = calcSigma([unc_mean],x_train,length_scale).flatten() # Gather gaussian kernel of how input mean relates to training inputs
 	K_unc_adj = calcSigma([unc_mean],x_train,-1.0*np.sqrt((length_scale*(length_scale+unc_var))/unc_var)) # Generate adjusted kernel-like distribution
-	ll = (1+(unc_var/length_scale))*K_unc*K_unc_adj # Calculate l, the adjusted Kernel
+	ll = ((1+(unc_var/length_scale))*K_unc*K_unc_adj).T # Calculate l, the adjusted Kernel
 
 	L = np.zeros((n_train,n_train))
 	for ii in range(n_train):
 		for jj in range(n_train):
 			xd = np.mean([x_train[ii],x_train[jj]])
 			L[ii,jj] = K_unc[ii]*K_unc[jj]*(1+2*(unc_var/length_scale))**(-0.5) * np.exp(0.5*(unc_var/((0.5*length_scale + unc_var)*(0.5*length_scale)))*(unc_mean-xd)**2)
-	
 
 	# Generate posterior mean and variance
-	post_unc_mean = Beta.dot(ll.flatten())
+	post_unc_mean = (Beta.T.dot(ll)).flatten()[0]
 
-	post_unc_var = 0
-	for ii in range(n_train):
-		for jj in range(n_train):
-			post_unc_var += Beta[ii]*Beta[jj]*L[ii,jj]
-	post_unc_var -= post_unc_mean**2
-	post_unc_var = np.abs(post_unc_var) # Just for safety's sake...
+	post_unc_var = (1-np.trace(Omg.dot(L))) + (np.trace(Beta.dot(Beta.T).dot(L-ll.dot(ll.T))))
 
-
+	# import pdb
+	# pdb.set_trace()
 
 	# Plot posterior output distribution
 	unc_data = np.random.normal(post_unc_mean,post_unc_var,size=10*n_pts)
@@ -200,7 +195,7 @@ if __name__ == '__main__':
 	plt.subplot(2,2,1)
 	plt.plot(exact_density(exact_unc_xs),exact_unc_xs,'g-',lw=3)
 	plt.plot(0.25*np.ones(10*n_pts),unc_data,'k*')
-	# plt.xlim([-0.25, 5])
+	plt.ylim([-4, 4])
 	plt.title("Posterior Output Distribution--Exact Method")
 	plt.ylabel("output, f(x)")
 	plt.subplot(2,2,2)
