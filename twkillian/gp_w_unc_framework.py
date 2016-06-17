@@ -114,7 +114,7 @@ if __name__ == '__main__':
 	f_post_mean, f_post_lower, f_post_upper = calculate_func_mean_and_variance(post_sampled_values)
 
 	# Plot all prior and posterior together
-	plt.figure(figsize=(16,9))
+	plt.figure(figsize=(14,6))
 	plt.subplot(1,2,1)
 	plt.plot(full_x,prior_sampled_values[:,0],full_x,prior_sampled_values[:,1],full_x,prior_sampled_values[:,2])
 	plt.plot(full_x,true_func(full_x),'k-',lw=3,label='True Function',alpha=0.35) # Plot the underlying function generating the data
@@ -193,13 +193,13 @@ if __name__ == '__main__':
 
 
 	# Plot posterior output distribution
-	unc_data = np.random.normal(post_unc_mean,post_unc_var,size=n_pts)
+	unc_data = np.random.normal(post_unc_mean,post_unc_var,size=10*n_pts)
 	exact_density = gaussian_kde(unc_data)
 	exact_unc_xs = np.linspace(post_unc_mean-2*post_unc_var,post_unc_mean+2*post_unc_var,10*n_pts)
 	plt.figure(figsize=(16,18))
 	plt.subplot(2,2,1)
 	plt.plot(exact_density(exact_unc_xs),exact_unc_xs,'g-',lw=3)
-	plt.plot(0.25*np.ones(n_pts),unc_data,'k*')
+	plt.plot(0.25*np.ones(10*n_pts),unc_data,'k*')
 	# plt.xlim([-0.25, 5])
 	plt.title("Posterior Output Distribution--Exact Method")
 	plt.ylabel("output, f(x)")
