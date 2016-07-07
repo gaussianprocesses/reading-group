@@ -16,12 +16,18 @@ def calcSigma(x1, x2,l):
 		--------------------------------------------------------
 		Notes:
 	'''
-	Sigma = np.zeros((len(x1),len(x2)))
-	for ii in range(len(x1)):
-		for jj in range(len(x2)):
-			Sigma[ii, jj] = np.exp(-0.5*(np.abs(x1[ii]-x2[jj])/float(l))**2)
+	length_scale = l
+	diffs = np.expand_dims(x1 /length_scale,1)\
+		 - np.expand_dims(x2 /length_scale,0)
 
-	return Sigma
+	return np.exp(-0.5 * np.sum(diffs**2,axis=2))
+
+
+def plotGaussian(x,m,v):
+	'''Takes in approximated mean and variance along with input values
+	 and provides Gaussian distribution output values'''
+
+	return (2*v*np.pi)**(-0.5) * np.exp(-(1.0/(2*v))*(x-m)**2)
 
 def sample_GP(num_functions,n_pts,mean,cov):
 	''' From updated mean and covariance, sample the num_functions from the prescribed GP
@@ -75,17 +81,17 @@ if __name__ == '__main__':
 	n_pts = 100
 	n_samples = 3
 
-	full_x = np.linspace(x_domain[0],x_domain[1],n_pts)
+	full_x = np.linspace(x_domain[0],x_domain[1],n_pts).reshape((-1,1))
 
 	seed = 222
 
-	# true_func = lambda xx: xx**2 * np.cos(xx)/xx
-	true_func = lambda xx: np.sqrt(np.abs(xx)) * np.sin(xx)**2
+	true_func = lambda xx: xx**2 * np.cos(xx)/xx
+	# true_func = lambda xx: np.sqrt(np.abs(xx)) * np.sin(xx)**2
 	# true_func = lambda xx: np.exp(-np.sin(xx)/xx)
 
 	# Generate training points
-	x_train = np.random.uniform(low=-5.,high=5.,size=n_train)
-	y_train = true_func(x_train) + np.random.normal(loc=0.0,scale=noise_var,size=n_train)
+	x_train = np.random.uniform(low=-5.,high=5.,size=n_train).reshape((-1,1))
+	y_train = true_func(x_train) + np.random.normal(loc=0.0,scale=noise_var,size=(n_train,1))
 
 	##################################
 	##  DETERMINISTIC PRIOR BASE GP ##
@@ -96,11 +102,14 @@ if __name__ == '__main__':
 	ks = calcSigma(x_train,full_x,length_scale) # Get covariance between train and test points
 	kss = calcSigma(full_x,full_x,length_scale) # Get test covariance
 
-	Omg = np.linalg.inv(K+((noise_var/2.)**2)*np.identity(n_train))
-	Beta = Omg.dot(y_train).reshape((-1,1))
+	# import pdb
+	# pdb.set_trace()
+
+	Omg = np.linalg.inv( K + ((noise_var/2.)**2*np.identity(n_train)) )
+	Beta = np.dot(Omg,y_train).reshape((-1,1))
 
 
-	post_mean = ks.T.dot(Beta)
+	post_mean = np.dot(ks.T,Beta)
 	post_var = kss - ks.T.dot(Omg.dot(ks))
 
 	# Sample from prior
@@ -118,13 +127,13 @@ if __name__ == '__main__':
 	plt.plot(full_x,prior_sampled_values[:,0],full_x,prior_sampled_values[:,1],full_x,prior_sampled_values[:,2])
 	plt.plot(full_x,true_func(full_x),'k-',lw=3,label='True Function',alpha=0.35) # Plot the underlying function generating the data
 	plt.plot(x_train,y_train,'r*',markersize=10,label='Training Input',alpha=0.35) 
-	plt.fill_between(full_x,-2.5*np.ones(n_pts),2.5*np.ones(n_pts),color='0.15',alpha=0.25)
+	plt.fill_between(full_x.flatten(),-2.5*np.ones(n_pts),2.5*np.ones(n_pts),color='0.15',alpha=0.25)
 	plt.xlabel('input, x')
 	plt.ylabel('output, f(x)')
 	plt.title('Sampling from Prior')
 	plt.subplot(1,2,2)
 	plt.plot(full_x,post_sampled_values[:,0],full_x,post_sampled_values[:,1],full_x,post_sampled_values[:,2])
-	plt.fill_between(full_x,f_post_lower,f_post_upper,color='0.15',alpha=0.25)
+	plt.fill_between(full_x.flatten(),f_post_lower,f_post_upper,color='0.15',alpha=0.25)
 	plt.plot(full_x,true_func(full_x),'k-',lw=3,label='True Function',alpha=0.35) # Plot the underlying function generating the data
 	plt.plot(x_train,y_train,'r*',markersize=10,label='Training Input',alpha=0.35) 
 	plt.xlabel('input, x')
@@ -140,8 +149,8 @@ if __name__ == '__main__':
 	unc_mean = 2.5
 	unc_var = 0.5
 
-	sampled_unc_inputs = np.random.normal(unc_mean,unc_var,10*n_pts)
-	unc_input_density = gaussian_kde(sampled_unc_inputs)
+	sampled_unc_inputs = np.random.normal(unc_mean,unc_var,size=(10*n_pts,1))
+	unc_input_density = gaussian_kde(sampled_unc_inputs.flatten())
 
 	## MONTE-CARLO METHOD - With sampled pts from input distribution, gather sampled output from GP.
 	#####################
@@ -153,8 +162,8 @@ if __name__ == '__main__':
 	ks = calcSigma(x_train,full_x,length_scale) # Get covariance between train and test points
 	kss = calcSigma(full_x,full_x,length_scale) # Get test covariance
 
-	post_mc_mean = K_unc_mc.T.dot(Beta)
-	post_mc_var = K_unc_mc2 - K_unc_mc.T.dot(Omg.dot(K_unc_mc))
+	post_mc_mean = np.dot(K_unc_mc.T,Beta)
+	post_mc_var = K_unc_mc2 - np.dot(K_unc_mc.T,np.dot(Omg,K_unc_mc))
 
 	post_mc_sampled_values = sample_GP(1,10*n_pts,post_mc_mean.flatten(),post_mc_var).flatten()
 
@@ -169,7 +178,10 @@ if __name__ == '__main__':
 	###############
 
 	# Calculate L and l
-	K_unc = calcSigma([unc_mean],x_train,length_scale).flatten() # Gather gaussian kernel of how input mean relates to training inputs
+	# import pdb
+	# pdb.set_trace()
+
+	K_unc = calcSigma(np.array(unc_mean).reshape((-1,1)),x_train,length_scale).flatten() # Gather gaussian kernel of how input mean relates to training inputs
 	K_unc_adj = calcSigma([unc_mean],x_train,-1.0*np.sqrt((length_scale*(length_scale+unc_var))/unc_var)) # Generate adjusted kernel-like distribution
 	ll = ((1+(unc_var/length_scale))*K_unc*K_unc_adj).T # Calculate l, the adjusted Kernel
 
@@ -182,36 +194,30 @@ if __name__ == '__main__':
 	# Generate posterior mean and variance
 	post_unc_mean = (Beta.T.dot(ll)).flatten()[0]
 
-	post_unc_var = (1-np.trace(Omg.dot(L))) + (np.trace(Beta.dot(Beta.T).dot(L-ll.dot(ll.T))))
-
-	# import pdb
-	# pdb.set_trace()
+	post_unc_var = (1 - np.trace( np.dot(Omg,L)) ) + ( np.trace( np.dot( np.dot(Beta,Beta.T), L-np.dot(ll,ll.T) ) ) )
 
 	# Plot posterior output distribution
-	unc_data = np.random.normal(post_unc_mean,post_unc_var,size=10*n_pts)
-	exact_density = gaussian_kde(unc_data)
-	exact_unc_xs = np.linspace(post_unc_mean-2*post_unc_var,post_unc_mean+2*post_unc_var,10*n_pts)
+	exact_unc_xs = np.linspace(-4,4,10*n_pts)
 	plt.figure(figsize=(16,18))
 	plt.subplot(2,2,1)
-	plt.plot(exact_density(exact_unc_xs),exact_unc_xs,'g-',lw=3)
-	plt.plot(0.25*np.ones(10*n_pts),unc_data,'k*')
-	plt.ylim([-4, 4])
+	plt.plot(plotGaussian(exact_unc_xs,post_unc_mean,post_unc_var),exact_unc_xs,'g-',lw=3)
+	# plt.ylim([-4, 4])
 	plt.title("Posterior Output Distribution--Exact Method")
 	plt.ylabel("output, f(x)")
 	plt.subplot(2,2,2)
 	plt.plot(full_x,post_sampled_values[:,0],full_x,post_sampled_values[:,1],full_x,post_sampled_values[:,2])
-	plt.fill_between(full_x,f_post_lower,f_post_upper,color='0.15',alpha=0.25)
+	plt.fill_between(full_x.flatten(),f_post_lower,f_post_upper,color='0.15',alpha=0.25)
 	plt.plot(full_x,true_func(full_x),'k-',lw=3,label='True Function',alpha=0.35) # Plot the underlying function generating the data
 	plt.plot(x_train,y_train,'r*',markersize=10,label='Training Input',alpha=0.35) 
+	plt.ylim([-4,4])
 	plt.xlabel('input, x')
 	plt.ylabel('output, f(x)')
 	plt.title("GP Prediction with noisy observations")
 	plt.subplot(2,2,3)
 	plt.plot(mc_density(mc_unc_xs),mc_unc_xs,'g--',lw=3)
 	plt.title('Posterior Output Distribution--Monte-Carlo Method')
-	plt.plot()
 	plt.subplot(2,2,4)
-	plt.plot(full_x,unc_input_density(full_x),'b-',lw=3)
+	plt.plot(full_x,plotGaussian(full_x,unc_mean,unc_var),'b-',lw=3)
 	plt.title('Input Distribution')
 	plt.xlabel('input, x')
 	plt.show()
