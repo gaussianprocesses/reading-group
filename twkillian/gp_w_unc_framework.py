@@ -85,9 +85,9 @@ if __name__ == '__main__':
 
 	seed = 222
 
-	true_func = lambda xx: xx**2 * np.cos(xx)/xx
+	# true_func = lambda xx: xx**2 * np.cos(xx)/xx
 	# true_func = lambda xx: np.sqrt(np.abs(xx)) * np.sin(xx)**2
-	# true_func = lambda xx: np.exp(-np.sin(xx)/xx)
+	true_func = lambda xx: np.exp(-np.sin(xx)/xx)
 
 	# Generate training points
 	x_train = np.random.uniform(low=-5.,high=5.,size=n_train).reshape((-1,1))
@@ -150,7 +150,6 @@ if __name__ == '__main__':
 	unc_var = 0.5
 
 	sampled_unc_inputs = np.random.normal(unc_mean,unc_var,size=(10*n_pts,1))
-	unc_input_density = gaussian_kde(sampled_unc_inputs.flatten())
 
 	## MONTE-CARLO METHOD - With sampled pts from input distribution, gather sampled output from GP.
 	#####################
@@ -167,8 +166,8 @@ if __name__ == '__main__':
 
 	post_mc_sampled_values = sample_GP(1,10*n_pts,post_mc_mean.flatten(),post_mc_var).flatten()
 
-	post_mc_mean = post_mc_sampled_values.mean()
-	post_mc_var = post_mc_sampled_values.std()**2
+	post_MC_mean = post_mc_sampled_values.mean()
+	post_MC_var = post_mc_sampled_values.var()
 
 	mc_density = gaussian_kde(post_mc_sampled_values)
 	mc_unc_xs = np.linspace(-4,4,10*n_pts)
@@ -183,7 +182,8 @@ if __name__ == '__main__':
 
 	K_unc = calcSigma(np.array(unc_mean).reshape((-1,1)),x_train,length_scale).flatten() # Gather gaussian kernel of how input mean relates to training inputs
 	K_unc_adj = calcSigma([unc_mean],x_train,-1.0*np.sqrt((length_scale*(length_scale+unc_var))/unc_var)) # Generate adjusted kernel-like distribution
-	ll = ((1+(unc_var/length_scale))*K_unc*K_unc_adj).T # Calculate l, the adjusted Kernel
+
+	ll = ((1+(unc_var/length_scale))**(-0.5)*K_unc*K_unc_adj).T # Calculate l, the adjusted Kernel
 
 	L = np.zeros((n_train,n_train))
 	for ii in range(n_train):
