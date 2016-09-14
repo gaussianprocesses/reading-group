@@ -86,12 +86,13 @@ if __name__ == '__main__':
 
 	# Define the points at which we want to define the functions
 	x_star = np.linspace(x_domain[0],x_domain[1],num=n_pts)
+	x_star = np.random.choice(x_star, 2)
 
 	# Calculate the covariance matrix between x_star and itself
 	sigma = calcSigma(x_star,x_star,length_scale)
 
 	# Generate a number of functions from the process
-	sampled_values = sample_GP(n_samples,n_pts,np.zeros(n_pts),sigma)
+	# sampled_values = sample_GP(n_samples,n_pts,np.zeros(n_pts),sigma)
 
 	# Plot the result
 	# plt.figure()
@@ -109,6 +110,8 @@ if __name__ == '__main__':
 	# Calculate the covariance matrices
 	# to "condition" based on the observed (top of page 16)
 	# this is the part that confused @mymakar, the following follows the text verbatim
+	import pdb
+	pdb.set_trace()
 	k_xx = calcSigma(x,x,length_scale)
 	k_xxs = calcSigma(x,x_star,length_scale)
 	k_xsx = calcSigma(x_star,x,length_scale)
@@ -168,7 +171,8 @@ if __name__ == '__main__':
 	marg_data = 0.5* y.T.dot(np.linalg.inv(k_xx+ (sigma_n**2)*np.identity(k_xx.shape[0])).dot(y)) - 0.5 * \
 		np.log(np.linalg.det(np.linalg.inv(k_xx+ (sigma_n**2)*np.identity(k_xx.shape[0])))) - (len(y)*0.5) * np.log(2*np.pi) 
 
-
+	import pdb
+	pdb.set_trace()
 
 	#############################################
 	## Monte Carlo Approach to Uncertain Input ##
@@ -248,7 +252,7 @@ if __name__ == '__main__':
 	plt.show()
 
 
-
+	# print "Did it!"
 
 
  

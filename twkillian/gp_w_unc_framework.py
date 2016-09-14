@@ -1,6 +1,9 @@
 '''The following script is my attempt at fleshing out a generic framework for GPs with uncertain inputs'''
 
-import numpy as np
+import autograd.numpy as np
+import autograd.numpy.random as npr
+from autograd import grad, value_and_grad
+from scipy.optimize import minimize
 import matplotlib.pyplot as plt
 from scipy.stats import multivariate_normal
 from scipy.stats import gaussian_kde
@@ -19,6 +22,9 @@ def calcSigma(x1, x2,l):
 	length_scale = l
 	diffs = np.expand_dims(x1 /length_scale,1)\
 		 - np.expand_dims(x2 /length_scale,0)
+
+	# import pdb
+	# pdb.set_trace()
 
 	return np.exp(-0.5 * np.sum(diffs**2,axis=2))
 
@@ -75,22 +81,25 @@ if __name__ == '__main__':
 
 	n_train = 10 # Number of training points
 	noise_var = 0.025 # Process noise of observing the true function
+	rs = npr.RandomState(0)
 
 	length_scale = 1.0
 	x_domain = (-5,5)
 	n_pts = 100
 	n_samples = 3
+	num_params = 1
 
 	full_x = np.linspace(x_domain[0],x_domain[1],n_pts).reshape((-1,1))
 
 	seed = 222
 
-	# true_func = lambda xx: xx**2 * np.cos(xx)/xx
+	true_func = lambda xx: xx**2 * np.cos(xx)/xx
 	# true_func = lambda xx: np.sqrt(np.abs(xx)) * np.sin(xx)**2
-	true_func = lambda xx: np.exp(-np.sin(xx)/xx)
+	# true_func = lambda xx: np.exp(-np.sin(xx)/xx)
 
 	# Generate training points
 	x_train = np.random.uniform(low=-5.,high=5.,size=n_train).reshape((-1,1))
+	x_train.sort(0)
 	y_train = true_func(x_train) + np.random.normal(loc=0.0,scale=noise_var,size=(n_train,1))
 
 	##################################
@@ -102,8 +111,38 @@ if __name__ == '__main__':
 	ks = calcSigma(x_train,full_x,length_scale) # Get covariance between train and test points
 	kss = calcSigma(full_x,full_x,length_scale) # Get test covariance
 
-	# import pdb
-	# pdb.set_trace()
+	###################################
+	## Marginal likelihood (p(y| X)) ##
+	###################################
+
+	def marg_likelihood(x, y, l):
+		k_xx = calcSigma(x,x,l)
+		marg_data = 0.5* np.dot(y.T,np.dot(np.linalg.inv(k_xx+ (noise_var**2)*np.identity(k_xx.shape[0])),y)) - 0.5 * \
+			np.log(np.linalg.det(np.linalg.inv(k_xx+ (noise_var**2)*np.identity(k_xx.shape[0])))) - (len(y)*0.5) * np.log(2*np.pi) 
+
+		return -1.0*marg_data
+
+
+	###################################
+	####         Gradient          ####
+	###################################
+
+	g_ml = lambda l: marg_likelihood(x_train,y_train,l)
+
+	init_params = 0.1 * rs.randn(num_params)
+	grad_ml = grad(g_ml)
+	cov_params = minimize(value_and_grad(g_ml),init_params,jac=True,
+						method = 'CG')
+
+	print marg_likelihood(x_train,y_train,length_scale)
+	print grad_ml(length_scale)
+	print "Initial Parameters: ", init_params
+	print "Optimized Parameters: ", cov_params.x
+
+	opt_length_scale = np.exp(cov_params.x[0])
+
+	import pdb
+	pdb.set_trace()
 
 	Omg = np.linalg.inv( K + ((noise_var/2.)**2*np.identity(n_train)) )
 	Beta = np.dot(Omg,y_train).reshape((-1,1))

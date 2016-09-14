@@ -1,4 +1,4 @@
-'''The following script is my attempt at translating r code from @mymakar into python'''
+'''The following script is my attempt at integrating autograd into a basic GP framework'''
 
 import autograd.numpy as np   # Thinly-wrapped version of Numpy
 import autograd.numpy.random as npr
@@ -9,7 +9,6 @@ from scipy.optimize import minimize
 import random
 
 # Calculates the covariance matrix sigma
-# @mymakar: Do something about these nasty nested loops
 def calcSigma(x1, x2,l):
 	''' Creating a Covariance Matrix
 		INPUTS:
@@ -98,8 +97,6 @@ if __name__ == '__main__':
 	sampled_values = sample_GP(n_samples,n_pts,np.zeros(n_pts),sigma)
 
 	# Plot the result
-	# import pdb
-	# pdb.set_trace()
 	plt.figure()
 	plt.plot(x_star,sampled_values[:,0],x_star,sampled_values[:,1],x_star,sampled_values[:,2])
 	plt.fill_between(x_star.flatten(),-2.5*np.ones(n_pts),2.5*np.ones(n_pts),color='0.15',alpha=0.25)
@@ -108,63 +105,63 @@ if __name__ == '__main__':
 	plt.title('Sampling from Prior')
 	plt.show()
 
-	# 2. Now let's assume that we have some know data points;
+	# # 2. Now let's assume that we have some know data points;
 	x = np.reshape(np.array([-4, -3, -1, 0, 2]),(5,1))
 	y = np.array([-2, 0, 1, 2, -1])
 
-	# Calculate the covariance matrices
-	# to "condition" based on the observed (top of page 16)
-	# this is the part that confused @mymakar, the following follows the text verbatim
-	k_xx = calcSigma(x,x,length_scale)
-	k_xxs = calcSigma(x,x_star,length_scale)
-	k_xsx = calcSigma(x_star,x,length_scale)
-	k_xsxs = calcSigma(x_star,x_star,length_scale)
+	# # Calculate the covariance matrices
+	# # to "condition" based on the observed (top of page 16)
+	# # this is the part that confused @mymakar, the following follows the text verbatim
+	# k_xx = calcSigma(x,x,length_scale)
+	# k_xxs = calcSigma(x,x_star,length_scale)
+	# k_xsx = calcSigma(x_star,x,length_scale)
+	# k_xsxs = calcSigma(x_star,x_star,length_scale)
 
-	# Generate points according to equation 2.19
-	# Update mean and covariance
-	f_star_mean = k_xsx.dot(np.linalg.inv(k_xx).dot(y))
-	f_star_cov = k_xsxs - k_xsx.dot(np.linalg.inv(k_xx).dot(k_xxs))
+	# # Generate points according to equation 2.19
+	# # Update mean and covariance
+	# f_star_mean = k_xsx.dot(np.linalg.inv(k_xx).dot(y))
+	# f_star_cov = k_xsxs - k_xsx.dot(np.linalg.inv(k_xx).dot(k_xxs))
 
 
-	f_star_sampled_values = sample_GP(n_samples*10,n_pts,f_star_mean,f_star_cov)
+	# f_star_sampled_values = sample_GP(n_samples*10,n_pts,f_star_mean,f_star_cov)
 
-	# Get mean and std of generated functions.
-	func_mean, func_lower, func_upper = calculate_func_mean_and_variance(f_star_sampled_values)
+	# # Get mean and std of generated functions.
+	# func_mean, func_lower, func_upper = calculate_func_mean_and_variance(f_star_sampled_values)
 
-	# Plot the results
-	plt.figure()
-	plt.plot(x_star,f_star_sampled_values[:,0],x_star,f_star_sampled_values[:,1],x_star,f_star_sampled_values[:,2])
-	plt.fill_between(x_star.flatten(),func_lower,func_upper,color='0.15',alpha=0.25)
-	plt.xlabel('input, x')
-	plt.ylabel('output, f(x)')
-	plt.title("Prediction with noise-free observations")
-	plt.show()
+	# # Plot the results
+	# plt.figure()
+	# plt.plot(x_star,f_star_sampled_values[:,0],x_star,f_star_sampled_values[:,1],x_star,f_star_sampled_values[:,2])
+	# plt.fill_between(x_star.flatten(),func_lower,func_upper,color='0.15',alpha=0.25)
+	# plt.xlabel('input, x')
+	# plt.ylabel('output, f(x)')
+	# plt.title("Prediction with noise-free observations")
+	# plt.show()
 
-	########################
-	## With Noise Example ##
-	########################
+	# ########################
+	# ## With Noise Example ##
+	# ########################
 
-	# Standard deviation of the noise
+	# # Standard deviation of the noise
 	sigma_n = 0.1
 
-	# Update the mean and covariance from equations 2.22-2.24
-	f_bar_star_mean = k_xsx.dot(np.linalg.inv(k_xx+ (sigma_n**2)*np.identity(k_xx.shape[0])).dot(y))
-	f_bar_star_cov = k_xsxs - k_xsx.dot(np.linalg.inv(k_xx+ (sigma_n**2)*np.identity(k_xx.shape[0])).dot(k_xxs))
+	# # Update the mean and covariance from equations 2.22-2.24
+	# f_bar_star_mean = k_xsx.dot(np.linalg.inv(k_xx+ (sigma_n**2)*np.identity(k_xx.shape[0])).dot(y))
+	# f_bar_star_cov = k_xsxs - k_xsx.dot(np.linalg.inv(k_xx+ (sigma_n**2)*np.identity(k_xx.shape[0])).dot(k_xxs))
 
-	# Redraw the sample functions
-	f_bar_star_sampled_values = sample_GP(n_samples*10,n_pts,f_bar_star_mean,f_bar_star_cov)
+	# # Redraw the sample functions
+	# f_bar_star_sampled_values = sample_GP(n_samples*10,n_pts,f_bar_star_mean,f_bar_star_cov)
 
-	# Get mean and spread of newly sampled values
-	func_bar_mean, func_bar_lower, func_bar_upper = calculate_func_mean_and_variance(f_bar_star_sampled_values)
+	# # Get mean and spread of newly sampled values
+	# func_bar_mean, func_bar_lower, func_bar_upper = calculate_func_mean_and_variance(f_bar_star_sampled_values)
 
-	# Plot the results
-	plt.figure()
-	plt.plot(x_star,f_bar_star_sampled_values[:,0],x_star,f_bar_star_sampled_values[:,1],x_star,f_bar_star_sampled_values[:,2])
-	plt.fill_between(x_star.flatten(),func_bar_lower,func_bar_upper,color='0.15',alpha=0.25)
-	plt.xlabel('input, x')
-	plt.ylabel('output, f(x)')
-	plt.title("Prediction using noisy observations")
-	plt.show()
+	# # Plot the results
+	# plt.figure()
+	# plt.plot(x_star,f_bar_star_sampled_values[:,0],x_star,f_bar_star_sampled_values[:,1],x_star,f_bar_star_sampled_values[:,2])
+	# plt.fill_between(x_star.flatten(),func_bar_lower,func_bar_upper,color='0.15',alpha=0.25)
+	# plt.xlabel('input, x')
+	# plt.ylabel('output, f(x)')
+	# plt.title("Prediction using noisy observations")
+	# plt.show()
 
 	###################################
 	## Marginal likelihood (p(y| X)) ##
@@ -198,7 +195,6 @@ if __name__ == '__main__':
 
 	# Calculate the covariance matrices with optimized length scale
 	# to "condition" based on the observed (top of page 16)
-	# this is the part that confused @mymakar, the following follows the text verbatim
 	ok_xx = calcSigma(x,x,opt_length_scale)
 	ok_xxs = calcSigma(x,x_star,opt_length_scale)
 	ok_xsx = calcSigma(x_star,x,opt_length_scale)

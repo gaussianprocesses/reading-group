@@ -23,6 +23,8 @@ def make_gp_funs(cov_func, num_cov_params):
     def predict(params, x, y, xstar):
         """Returns the predictive mean and covariance at locations xstar,
            of the latent function value f (without observation noise)."""
+        import pdb
+        pdb.set_trace()
         mean, cov_params, noise_scale = unpack_kernel_params(params)
         cov_f_f = cov_func(cov_params, xstar, xstar)
         cov_y_f = cov_func(cov_params, x, xstar)
@@ -50,8 +52,8 @@ def rbf_covariance(kernel_params, x, xp):
 
 def build_toy_dataset(D=1, n_data=20, noise_std=0.1):
     rs = npr.RandomState(0)
-    inputs  = np.concatenate([np.linspace(0, 3, num=n_data/2),
-                              np.linspace(6, 8, num=n_data/2)])
+    inputs  = np.concatenate([np.linspace(0, 3, num=(n_data*D)/2),
+                              np.linspace(6, 8, num=(n_data*D)/2)])
     targets = (np.cos(inputs) + rs.randn(n_data) * noise_std) / 2.0
     inputs = (inputs - 4.0) / 2.0
     inputs  = inputs.reshape((len(inputs), D))
@@ -68,7 +70,8 @@ if __name__ == '__main__':
 
     X, y = build_toy_dataset(D=D)
     objective = lambda params: -log_marginal_likelihood(params, X, y)
-
+    # import pdb
+    # pdb.set_trace()
     # Set up figure.
     fig = plt.figure(figsize=(12,8), facecolor='white')
     ax = fig.add_subplot(111, frameon=False)
@@ -98,11 +101,14 @@ if __name__ == '__main__':
         ax.set_xticks([])
         ax.set_yticks([])
         plt.draw()
-        plt.pause(1.0/60.0)
+        plt.pause(20.0/60.0)
 
     # Initialize covariance parameters
     rs = npr.RandomState(0)
     init_params = 0.1 * rs.randn(num_params)
+
+    import pdb
+    pdb.set_trace()
 
     print("Optimizing covariance parameters...")
     cov_params = minimize(value_and_grad(objective), init_params, jac=True,
